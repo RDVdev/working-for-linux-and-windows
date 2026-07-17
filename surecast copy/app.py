@@ -12,10 +12,14 @@ app = Flask(__name__)
 CORS(app)
 
 @app.route('/api/run-phase', methods=['POST'])
+@app.route('/api/run/<phase_id>', methods=['POST'])
 @cross_origin()
-def run_phase():
-    data = request.get_json()
-    phase = data.get('phase', '')
+def run_phase(phase_id=None):
+    if phase_id:
+        phase = f"phase{phase_id}" if not str(phase_id).startswith("phase") else str(phase_id)
+    else:
+        data = request.get_json(silent=True) or {}
+        phase = data.get('phase', '')
     
     script_map = {
         'phase1': 'phase1_data_profiling.py',
@@ -43,10 +47,14 @@ def run_phase():
             timeout=600
         )
         
+        stdout_str = result.stdout or ""
+        stderr_str = result.stderr or ""
         return jsonify({
             'status': 'success' if result.returncode == 0 else 'error',
-            'stdout': result.stdout,
-            'stderr': result.stderr,
+            'success': result.returncode == 0,
+            'logs': stdout_str + ("\n" + stderr_str if stderr_str else ""),
+            'stdout': stdout_str,
+            'stderr': stderr_str,
             'returncode': result.returncode
         })
     except subprocess.TimeoutExpired:
@@ -59,6 +67,7 @@ def run_phase():
 def get_status():
     """Check which phases have completed based on output files."""
     status = {
+        'has_dataset': os.path.exists('data/DataCoSupplyChainDataset.csv') or os.path.exists('data/cleaned_dataset.csv'),
         'phase1': os.path.exists('data/cleaned_dataset.csv'),
         'phase2': os.path.exists('models/best_seq_len.json'),
         'phase3': os.path.exists('data/engineered_dataset.csv'),

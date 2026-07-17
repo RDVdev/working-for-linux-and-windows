@@ -154,6 +154,9 @@ def train_dl_branch(X_train, y_train, X_val, y_val, input_size, seq_len,
     epochs = epochs or config.DL_EPOCHS
     device = device or config.DEVICE
     
+    X_train = np.clip(X_train, -20.0, 20.0)
+    X_val = np.clip(X_val, -20.0, 20.0)
+    
     model = MultiBranchSequenceModel(input_size=input_size, seq_len=seq_len,
                                      active_channels=active_channels).to(device)
     optimizer = optim.Adam(model.parameters(), lr=config.DL_LEARNING_RATE,
@@ -183,6 +186,7 @@ def train_dl_branch(X_train, y_train, X_val, y_val, input_size, seq_len,
             mu = model(X_b)
             loss = criterion(mu, y_b)
             loss.backward()
+            torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
             optimizer.step()
             train_loss += loss.item() * X_b.size(0)
             
@@ -256,6 +260,9 @@ def train_standalone_transformer(X_train, y_train, X_val, y_val, input_size, seq
     epochs = epochs or config.DL_EPOCHS
     device = device or config.DEVICE
     
+    X_train = np.clip(X_train, -20.0, 20.0)
+    X_val = np.clip(X_val, -20.0, 20.0)
+    
     model = StandaloneTransformer(input_size=input_size, seq_len=seq_len).to(device)
     optimizer = optim.Adam(model.parameters(), lr=config.DL_LEARNING_RATE)
     criterion = nn.MSELoss()
@@ -281,6 +288,7 @@ def train_standalone_transformer(X_train, y_train, X_val, y_val, input_size, seq
             mu = model(X_b)
             loss = criterion(mu, y_b)
             loss.backward()
+            torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
             optimizer.step()
             
         model.eval()
@@ -380,6 +388,7 @@ def main():
     # Load data using shared utilities (eliminates code duplication)
     try:
         X_seq_all, y_seq_all, X_tab_all, feature_cols, cols = data_utils.load_and_build_data()
+        X_seq_all = np.clip(X_seq_all, -20.0, 20.0)
     except FileNotFoundError:
         logging.error(f"[ERROR] Run Phase 3 first to generate '{config.ENGINEERED_DATA_PATH}'.")
         sys.exit(1)
