@@ -1,0 +1,19 @@
+# Automated-test overlay: replaces the interactive prompt of player1 and
+# player2 with scripted players (see scripts/). Only those two services are
+# started by run-tests.sh; player3/player4 stay interactive for manual runs.
+#
+# This file is layered on top of networking/docker-compose.yml:
+#   docker compose -f docker-compose.yml -f docker/test/compose.test.yml up -d player1 player2
+
+services:
+  player1:
+    # scripted players capture the game's stdout themselves; a pty would
+    # only add \r line endings to `docker compose logs`, which breaks
+    # anchored grep assertions in run_tests.sh.
+    tty: false
+    environment:
+      PLAYER_SCRIPT: "sh /opt/test/codebreaker.sh"
+  player2:
+    tty: false
+    environment:
+      PLAYER_SCRIPT: "sh /opt/test/mastermind.sh"

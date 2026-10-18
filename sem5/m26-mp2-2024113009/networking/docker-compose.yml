@@ -1,0 +1,62 @@
+# Mastermind evaluation testbed.
+#
+# Run from networking/:
+#   Normal (TCP):        docker compose up -d --build
+#   Cost-cutting (UDP):  docker compose -f docker-compose.yml -f docker-compose.costcut.yml up -d --build
+#
+# Each service is an interactive mastermind instance. Attach to one with:
+#   docker compose attach player1        (detach: Ctrl-p Ctrl-q)
+#
+# Per-player network logs land in docker/logs/playerN/log.txt on the host.
+
+name: mastermind
+
+x-player: &player
+  build:
+    context: .
+    dockerfile: docker/Dockerfile
+  image: mastermind-testbed:latest
+  networks:
+    - mmlan
+  # stdin stays open so the game waits for a name even when nobody is
+  # attached; tty makes `docker compose attach` behave like a terminal.
+  stdin_open: true
+  tty: true
+  environment: &player-env
+    BLOCK_TCP: "0"
+    MASTERMIND_FLAGS: "--log"
+    PLAYER_SCRIPT: ""
+    # host uid/gid the game runs as, so docker/logs/playerN/log.txt is
+    # owned by you (defaults to 1000:1000; override with PUID/PGID env).
+    PUID: "${PUID:-1000}"
+    PGID: "${PGID:-1000}"
+  # NET_ADMIN lets the entrypoint add a route for 255.255.255.255 so UDP
+  # broadcast discovery works on the internal bridge (which has no default
+  # route). Only affects the container's own network namespace.
+  cap_add:
+    - NET_ADMIN
+
+services:
+  player1:
+    <<: *player
+    volumes:
+      - ./docker/logs/player1:/data
+  player2:
+    <<: *player
+    volumes:
+      - ./docker/logs/player2:/data
+  player3:
+    <<: *player
+    volumes:
+      - ./docker/logs/player3:/data
+  player4:
+    <<: *player
+    volumes:
+      - ./docker/logs/player4:/data
+
+networks:
+  mmlan:
+    driver: bridge
+    # isolated from the internet: nothing the containers send can leave the
+    # compose network (this testbed only needs LAN-style discovery).
+    internal: true
