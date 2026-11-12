@@ -1,0 +1,43 @@
+# Which assignment viva evaluates. The git/push/flag views work for any repo;
+# the test runners are keyed by the names under [tests].
+
+host     = "https://code.iiit.ac.in"
+org      = "osn"
+name     = "mp3"
+prefix   = "m26-mp3-"            # repo = prefix + roll
+template = "osn/mp3"
+deadline = "2026-11-10T23:59:59+05:30"
+late_days = []                   # no schedule: each 24h after the deadline costs one late day
+viva_sheet = "sheet/mp3-viva.html"
+
+# TA allocation sheet (must be viewable by link). Rows with a non-numeric
+# first column are TA headers; the students below them are that TA's.
+sheet = "https://docs.google.com/spreadsheets/d/1bLtrjufcRnA5UPsdAELqmbr8V-sJSRcbY3R-xojcdRw/export?format=csv&gid=1222100155"
+
+[tests]
+birthday = true
+airport = true
+# Run at the xv6 shell, in this order. usertests -q takes about a minute, so it
+# goes last and the quick results show up first.
+xv6 = ["symlinktest"]
+xv6_shell = true                 # ln -s and readlink, through the shell
+xv6_last = ["usertests -q"]
+# Tests run with the template's copies, so editing them shows up as a flag, not as a pass.
+xv6_protected = ["xv6/user/symlinktest.c", "xv6/user/usertests.c"]
+# These may only appear in the template's initial commit. Any later commit that
+# adds, edits, moves or deletes them is flagged, even if HEAD matches again.
+xv6_frozen = ["xv6/user/symlinktest.c"]
+
+[tests.programs]
+# What each part's Makefile builds, in concurrency/<part>/ or concurrency/.
+# Unset: viva picks the executable that looks like the part's.
+# birthday = "birthday-boy"
+# airport = "airport-troubles"
+
+[flags]
+# Doubts doc: no real-time delays (airport), no barriers (Q11, Q17), only
+# locks, condition variables and semaphores (Q22), and only C (Q4).
+banned = '\b(usleep|nanosleep|clock_nanosleep|sleep)\s*\(|pthread_barrier|__atomic_|__sync_|stdatomic\.h|\b_Atomic\b|\batomic_[a-z_]+\s*\('
+banned_paths = ["concurrency"]
+banned_files = '^concurrency/.*\.(cpp|cc|cxx|hpp)$'
+required = ["README.md"]
